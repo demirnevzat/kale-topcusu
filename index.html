@@ -72,6 +72,8 @@ canvas{display:block;width:100%;height:auto;image-rendering:pixelated}
   max-width:80%;
 }
 .dlg p{margin:0;font-size:26px}
+.dlg.info{width:min(80%,420px);box-sizing:border-box}
+.dlg.info p{font-size:18px;text-align:left}
 .status{
   display:flex;flex-wrap:wrap;gap:4px 24px;
   padding:6px 12px;border-bottom:2px solid var(--ink);background:var(--chrome);
@@ -110,6 +112,10 @@ button:focus-visible,input:focus-visible{outline:2px dashed var(--ink);outline-o
       <p id="dlgText"></p>
       <button type="button" class="main" id="again">Yeniden Başlat</button>
     </div>
+    <div class="dlg info" id="info" hidden>
+      <p>İki kişilik. Sırayla açı ve güç seçip ateş edin. Rakip kaleyi ilk vuran kazanır; tek isabet kaleyi yıkar. Rüzgâr topu ok yönünde sürükler; sayı büyüdükçe etkisi artar. Klavye: ← → açı, ↑ ↓ güç, Boşluk ateş.</p>
+      <button type="button" id="infoClose">Kapat</button>
+    </div>
   </div>
   <div class="status">
     <span>Sıra: <b id="sTurn">Sol kale</b></span>
@@ -131,10 +137,10 @@ button:focus-visible,input:focus-visible{outline:2px dashed var(--ink);outline-o
     <div class="btns">
       <button type="submit" class="main" id="fire">Ateş</button>
       <button type="button" id="restart">Yeni Oyun</button>
+      <button type="button" id="infoBtn" aria-controls="info" aria-expanded="false">Bilgi</button>
     </div>
   </form>
 </section>
-<p class="hint">İki kişilik. Sırayla açı ve güç seçip ateş edin. Rakip kaleyi ilk vuran kazanır; tek isabet kaleyi yıkar. Klavye: ← → açı, ↑ ↓ güç, Boşluk ateş.</p>
 
 <script>
 (function(){
@@ -226,8 +232,12 @@ function draw(now){
       ctx.beginPath();ctx.moveTo(c.x-5,c.y-24);ctx.lineTo(c.x+5,c.y-24);ctx.lineTo(c.x,c.y-17);ctx.fill();
     }
   });
-  for(const t of trail)ctx.fillRect(t[0],t[1],1,1);
-  if(shot)ctx.fillRect(Math.round(shot.x)-1,Math.round(shot.y)-1,3,3);
+  for(const t of trail)ctx.fillRect(t[0]-1,t[1]-1,2,2);
+  if(shot){
+    const sx=Math.round(shot.x),sy=Math.round(shot.y);
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(sx,sy,6.5,0,7);ctx.fill();
+    ctx.fillStyle='#111';ctx.beginPath();ctx.arc(sx,sy,5,0,7);ctx.fill();
+  }
   if(boom){
     const k=boom.t/0.35;ctx.lineWidth=1;
     for(let r=4;r<=R+6;r+=4){const rr=r*k+2;ctx.beginPath();ctx.arc(boom.x,boom.y,rr,0,7);ctx.stroke();}
@@ -250,7 +260,7 @@ function fire(){
 
 function step(dt){
   const s=shot;
-  s.vx+=wind*4*dt;s.vy+=G*dt;s.x+=s.vx*dt;s.y+=s.vy*dt;
+  s.vx+=wind*10*dt;s.vy+=G*dt;s.x+=s.vx*dt;s.y+=s.vy*dt;
   if((++s.n&3)===0)trail.push([Math.round(s.x),Math.round(s.y)]);
   if(s.y>=H||s.x<-80||s.x>W+80){shot=null;endTurn();return;}
   const ix=Math.round(s.x),iy=Math.round(s.y);
@@ -332,6 +342,12 @@ function sndWin(){[440,554,659,880].forEach((f,i)=>beep(f,f,0.14,i*0.15,0.1));}
 $('angle').addEventListener('input',e=>{players[turn].angle=+e.target.value;syncUI();});
 $('power').addEventListener('input',e=>{players[turn].power=+e.target.value;syncUI();});
 $('ctl').addEventListener('submit',e=>{e.preventDefault();fire();});
+function showInfo(on){
+  $('info').hidden=!on;$('infoBtn').setAttribute('aria-expanded',on?'true':'false');
+  if(on)$('infoClose').focus();
+}
+$('infoBtn').addEventListener('click',()=>showInfo($('info').hidden));
+$('infoClose').addEventListener('click',()=>{showInfo(false);$('infoBtn').focus();});
 $('restart').addEventListener('click',build);
 $('again').addEventListener('click',build);
 document.addEventListener('keydown',e=>{
